@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { jsonrepair } from 'jsonrepair'
 
 const DEFAULT_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
 const DEFAULT_MODEL = 'qwen-vl-plus'
@@ -9,7 +10,7 @@ function buildPrompt({ douyinLink, category, hasCommentScreenshots }) {
 ${hasCommentScreenshots ? '用户同时上传了评论区截图。请识别截图中的评论内容，重点分析用户真实反馈、质疑点、共鸣点、争议点、潜在选题机会和评论区转化机会。' : '用户没有上传评论区截图。评论区相关结论只能给出推测，并标注需要补充评论区截图。'}
 
 要求：
-1. 输出必须是严格 JSON，不要 Markdown，不要解释。
+1. 输出必须是严格 JSON，不要 Markdown，不要解释；所有字段名和字符串必须使用英文双引号，不能使用单引号。
 2. 如果无法从链接直接获得标题、播放量、评论等真实信息，要明确标注为“需补充”。
 3. 请站在创作者视角回答：这个视频有没有爆款潜质、最大短板是什么、先改哪里最有效。
 4. 诊断需要覆盖选题价值、目标人群、开头钩子、标题封面、内容结构、节奏信息密度、情绪价值、互动设计、转化/种草动机、重发重剪策略。
@@ -90,7 +91,13 @@ function parseJsonContent(content) {
     throw new Error('AI 返回内容不是 JSON 格式')
   }
 
-  return JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1))
+  const jsonText = cleaned.slice(jsonStart, jsonEnd + 1)
+
+  try {
+    return JSON.parse(jsonText)
+  } catch {
+    return JSON.parse(jsonrepair(jsonText))
+  }
 }
 
 function buildUserContent({ douyinLink, category, commentScreenshots }) {
@@ -149,10 +156,18 @@ export async function analyzeDouyinVideo({ apiKey, apiUrl, model, douyinLink, ca
       throw new Error('AI 接口没有返回有效内容')
     }
 
-    return parseJsonContent(content)
+    try {
+      return parseJsonContent(content)
+    } catch (parseError) {
+      throw new Error(`AI 返回内容解析失败：${parseError.message}`)
+    }
   } catch (error) {
     const status = error?.response?.status
     const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message
+
+    if (message?.startsWith('AI 返回内容解析失败')) {
+      throw error
+    }
 
     if (status) {
       throw new Error(`百炼接口请求失败：${status}，${message}`)
