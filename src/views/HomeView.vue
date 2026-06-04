@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { analyzeDouyinVideo } from '../services/aiAnalyzer'
-import { buildShareUrl, decryptShareKey, encryptShareKey, getEncryptedKeyFromUrl, isAdminMode } from '../services/shareKey'
+import { decryptShareKey, getEncryptedKeyFromUrl } from '../services/shareKey'
 
 const categories = [
   '泛知识',
@@ -48,15 +48,10 @@ const report = ref(null)
 const errorMessage = ref('')
 const sharedApiKey = ref('')
 const encryptedKeyStatus = ref('正在检查访问授权...')
-const showAdminPanel = ref(false)
-const adminApiKey = ref('')
-const generatedShareUrl = ref('')
 
 const canStart = computed(() => douyinLink.value.trim().length > 0 && !isAnalyzing.value)
 
-onMounted(async () => {
-  showAdminPanel.value = isAdminMode()
-
+onMounted(() => {
   const encryptedKey = getEncryptedKeyFromUrl()
 
   if (!encryptedKey) {
@@ -65,7 +60,7 @@ onMounted(async () => {
   }
 
   try {
-    sharedApiKey.value = await decryptShareKey(encryptedKey)
+    sharedApiKey.value = decryptShareKey(encryptedKey)
     encryptedKeyStatus.value = '访问授权已加载。'
   } catch {
     encryptedKeyStatus.value = '访问授权解析失败，请检查分享链接是否完整。'
@@ -182,26 +177,6 @@ function resetDiagnosis() {
   activeStep.value = 0
 }
 
-async function generateShareLink() {
-  errorMessage.value = ''
-  generatedShareUrl.value = ''
-
-  if (!adminApiKey.value.trim()) {
-    errorMessage.value = '请先填写百炼 API Key。'
-    return
-  }
-
-  const encryptedKey = await encryptShareKey(adminApiKey.value.trim())
-  generatedShareUrl.value = buildShareUrl(encryptedKey)
-}
-
-async function copyShareLink() {
-  if (!generatedShareUrl.value) {
-    return
-  }
-
-  await navigator.clipboard.writeText(generatedShareUrl.value)
-}
 </script>
 
 <template>
@@ -293,18 +268,6 @@ async function copyShareLink() {
               {{ step }}
             </li>
           </ul>
-        </div>
-
-        <div v-if="showAdminPanel" class="admin-panel">
-          <h2>生成客户链接</h2>
-          <p>填写百炼 API Key 后生成带加密授权的分享链接。</p>
-          <input v-model="adminApiKey" placeholder="阿里云百炼 API Key" type="password" />
-          <button class="secondary-action" type="button" @click="generateShareLink">生成链接</button>
-
-          <div v-if="generatedShareUrl" class="share-result">
-            <textarea :value="generatedShareUrl" readonly rows="3" />
-            <button class="ghost-action" type="button" @click="copyShareLink">复制链接</button>
-          </div>
         </div>
 
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
