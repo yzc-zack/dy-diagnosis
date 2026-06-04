@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { analyzeDouyinVideo } from '../services/aiAnalyzer'
+import { buildShareUrl, decryptShareKey, encryptShareKey, getEncryptedKeyFromUrl, isAdminMode } from '../services/shareKey'
 
 const categories = [
   '泛知识',
@@ -45,8 +46,31 @@ const isAnalyzing = ref(false)
 const activeStep = ref(0)
 const report = ref(null)
 const errorMessage = ref('')
+const sharedApiKey = ref('')
+const encryptedKeyStatus = ref('正在检查访问授权...')
+const showAdminPanel = ref(false)
+const adminApiKey = ref('')
+const generatedShareUrl = ref('')
 
 const canStart = computed(() => douyinLink.value.trim().length > 0 && !isAnalyzing.value)
+
+onMounted(async () => {
+  showAdminPanel.value = isAdminMode()
+
+  const encryptedKey = getEncryptedKeyFromUrl()
+
+  if (!encryptedKey) {
+    encryptedKeyStatus.value = '当前链接未携带访问授权。'
+    return
+  }
+
+  try {
+    sharedApiKey.value = await decryptShareKey(encryptedKey)
+    encryptedKeyStatus.value = '访问授权已加载。'
+  } catch {
+    encryptedKeyStatus.value = '访问授权解析失败，请检查分享链接是否完整。'
+  }
+})
 
 function isDouyinLink(value) {
   return /https?:\/\/[^\s]*(douyin\.com|iesdouyin\.com)/i.test(value)
@@ -136,6 +160,7 @@ async function startDiagnosis() {
     const progressPromise = runProgress()
 
     const nextReport = await analyzeDouyinVideo({
+      apiKey: sharedApiKey.value,
       douyinLink: link,
       category: category.value,
       commentScreenshots: commentScreenshots.value,
@@ -155,6 +180,27 @@ function resetDiagnosis() {
   report.value = null
   errorMessage.value = ''
   activeStep.value = 0
+}
+
+async function generateShareLink() {
+  errorMessage.value = ''
+  generatedShareUrl.value = ''
+
+  if (!adminApiKey.value.trim()) {
+    errorMessage.value = '请先填写百炼 API Key。'
+    return
+  }
+
+  const encryptedKey = await encryptShareKey(adminApiKey.value.trim())
+  generatedShareUrl.value = buildShareUrl(encryptedKey)
+}
+
+async function copyShareLink() {
+  if (!generatedShareUrl.value) {
+    return
+  }
+
+  await navigator.clipboard.writeText(generatedShareUrl.value)
 }
 </script>
 
@@ -223,6 +269,9 @@ function resetDiagnosis() {
       <aside class="panel config-panel">
         <p class="section-tag">视频信息</p>
         <h2>选择内容类目</h2>
+        <div :class="['auth-status', { ready: sharedApiKey }]">
+          {{ encryptedKeyStatus }}
+        </div>
         <div class="category-list">
           <button
             v-for="item in categories"
@@ -244,6 +293,18 @@ function resetDiagnosis() {
               {{ step }}
             </li>
           </ul>
+        </div>
+
+        <div v-if="showAdminPanel" class="admin-panel">
+          <h2>生成客户链接</h2>
+          <p>填写百炼 API Key 后生成带加密授权的分享链接。</p>
+          <input v-model="adminApiKey" placeholder="阿里云百炼 API Key" type="password" />
+          <button class="secondary-action" type="button" @click="generateShareLink">生成链接</button>
+
+          <div v-if="generatedShareUrl" class="share-result">
+            <textarea :value="generatedShareUrl" readonly rows="3" />
+            <button class="ghost-action" type="button" @click="copyShareLink">复制链接</button>
+          </div>
         </div>
 
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>

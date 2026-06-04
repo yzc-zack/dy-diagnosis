@@ -262,6 +262,21 @@ input:focus {
   flex-direction: column;
 }
 
+.auth-status {
+  border-radius: 14px;
+  background: #fff5e5;
+  color: #a26200;
+  font-size: 13px;
+  font-weight: 900;
+  margin-top: 14px;
+  padding: 12px 14px;
+}
+
+.auth-status.ready {
+  background: #f2fbf7;
+  color: #18a66f;
+}
+
 .category-list {
   display: flex;
   flex-wrap: wrap;
@@ -337,6 +352,50 @@ input:focus {
 
 .progress-card li.done::before {
   background: #18b87a;
+}
+
+.admin-panel {
+  border: 1px solid #ececf0;
+  border-radius: 16px;
+  background: #fbfbfc;
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px;
+}
+
+.admin-panel p {
+  color: #7c828e;
+  font-size: 13px;
+  margin: 0;
+}
+
+.secondary-action,
+.ghost-action {
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 12px 16px;
+}
+
+.secondary-action {
+  background: #111318;
+  color: #fff;
+}
+
+.ghost-action {
+  background: #f0f1f3;
+  color: #535b68;
+}
+
+.share-result {
+  display: grid;
+  gap: 10px;
+}
+
+.share-result textarea {
+  min-height: auto;
+  resize: vertical;
 }
 
 .error-message {
