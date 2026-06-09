@@ -163,10 +163,15 @@ export async function analyzeDouyinVideo({ apiKey, apiUrl, model, douyinLink, ca
     }
   } catch (error) {
     const status = error?.response?.status
+    const errorCode = error?.response?.data?.error?.code
     const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message
 
     if (message?.startsWith('AI 返回内容解析失败')) {
       throw error
+    }
+
+    if (errorCode === 'AllocationQuota.FreeTierOnly') {
+      throw new Error('百炼模型免费额度已用完。请在阿里云百炼控制台关闭“仅使用免费额度”模式并开通按量付费，或更换还有额度的 API Key。')
     }
 
     if (status) {
