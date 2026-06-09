@@ -1,8 +1,8 @@
 import axios from 'axios'
 import { jsonrepair } from 'jsonrepair'
 
-const DEFAULT_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
-const DEFAULT_MODEL = 'qwen-vl-plus'
+const DEFAULT_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+const DEFAULT_MODEL = 'glm-5v-turbo'
 
 function buildPrompt({ douyinLink, category, hasCommentScreenshots }) {
   return `你是一个专业的抖音短视频增长诊断师。用户提供了一个抖音视频分享链接，但你不能假装已经真实访问抖音后台数据。请基于链接、类目和短视频增长方法论，生成一份可执行的诊断报告。
@@ -119,10 +119,10 @@ function buildUserContent({ douyinLink, category, commentScreenshots }) {
 }
 
 export async function analyzeDouyinVideo({ apiKey, apiUrl, model, douyinLink, category, commentScreenshots = [] }) {
-  const resolvedApiKey = apiKey || import.meta.env.VITE_ALIYUN_BAILIAN_API_KEY
+  const resolvedApiKey = apiKey || import.meta.env.VITE_ZHIPU_API_KEY
 
   if (!resolvedApiKey) {
-    throw new Error('缺少阿里云百炼 API Key。')
+    throw new Error('缺少智谱 API Key。')
   }
 
   try {
@@ -171,13 +171,13 @@ export async function analyzeDouyinVideo({ apiKey, apiUrl, model, douyinLink, ca
     }
 
     if (errorCode === 'AllocationQuota.FreeTierOnly') {
-      throw new Error('百炼模型免费额度已用完。请在阿里云百炼控制台关闭“仅使用免费额度”模式并开通按量付费，或更换还有额度的 API Key。')
+      throw new Error('模型免费额度已用完。请在模型平台控制台开通按量付费，或更换还有额度的 API Key。')
     }
 
     if (status) {
-      throw new Error(`百炼接口请求失败：${status}，${message}`)
+      throw new Error(`智谱接口请求失败：${status}，${message}`)
     }
 
-    throw new Error(`百炼接口请求失败：${message}`)
+    throw new Error(`智谱接口请求失败：${message}`)
   }
 }
